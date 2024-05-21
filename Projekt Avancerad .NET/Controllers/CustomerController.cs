@@ -172,6 +172,49 @@ namespace Projekt_Avancerad_.NET.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error to retrieve data from database.");
             }
         }
-                       
+
+        [Authorize(Roles = "admin")]
+        [HttpGet("Sort/Filter")]
+        public async Task<IActionResult> GetAllCustomers(
+        string? filterByName = null,
+        string? sortBy = "Name",
+        string sortOrder = "asc")
+        {
+            try
+            {
+                var customers = await _customerRepository.GetAll();
+
+                //Filtering
+                if (!string.IsNullOrEmpty(filterByName))
+                {
+                    customers = customers.Where(c => c.Name.Contains(filterByName, StringComparison.OrdinalIgnoreCase)).ToList();
+                }
+
+                //Sorting
+                customers = sortOrder.ToLower() switch
+                {
+                    "desc" => sortBy.ToLower() switch
+                    {
+                        "name" => customers.OrderByDescending(c => c.Name).ToList(),
+                        "customerid" => customers.OrderByDescending(c => c.CustomerId).ToList(),
+                        _ => customers.OrderByDescending(c => c.Name).ToList(),
+                    },
+                    _ => sortBy.ToLower() switch
+                    {
+                        "name" => customers.OrderBy(c => c.Name).ToList(),
+                        "customerid" => customers.OrderBy(c => c.CustomerId).ToList(),
+                        _ => customers.OrderBy(c => c.Name).ToList(),
+                    }
+                };
+
+                var customersDTO = customers.Select(c => _mapper.Map<CustomerDTO>(c));
+                return Ok(customersDTO);
+            }
+            catch (Exception ex)
+            {                
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving data from database.");
+            }
+        }
+
     }
 }
